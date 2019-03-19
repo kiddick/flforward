@@ -1,0 +1,12 @@
+{
+  "bot_token": "",
+  "tele_proxy": "",
+  "log_file": "forward.log",
+  "debug": true,
+  "db_uri": "postgresql://user:password@localhost/dbname",
+  "access_token": "",
+  "api_version": "5.92",
+  "group_id": -1,
+  "channel_id": -1,
+  "interval": 20
+}

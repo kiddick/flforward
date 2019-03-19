@@ -1,0 +1,15 @@
+[Unit]
+Description=Flforward as service
+[Service]
+ExecStart=path to shot entrypoint within virtualenv
+User=user
+[Install]
+WantedBy=multi-user.target
+
+# copy that file to /usr/lib/systemd/system/flforward.service
+# systemctl start flforward
+# systemctl status flforward
+# systemctl stop flforward
+# systemctl restart flforward
+# systemctl daemon-reload
+# sudo journalctl -u flforward
