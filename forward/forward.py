@@ -37,8 +37,8 @@ class InterceptHandler(logging.Handler):
 
 
 logging.getLogger(None).setLevel(logging.DEBUG)
+logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
 logging.getLogger(None).addHandler(InterceptHandler())
-logging.getLogger('asyncio').addHandler(InterceptHandler())
 
 API = 'https://api.vk.com/method/'
 
@@ -63,8 +63,7 @@ async def ask(session: aiohttp.ClientSession, bot):
         logger.exception(f'Exception during wall check')
         return
     data = await response.json()
-    assert data['response']
-    logger.debug(f'{data["response"]["count"]}')
+    logger.debug(f'Total: {data["response"]["count"]}')
     await process_updates(data['response']['items'], bot)
 
 
@@ -87,10 +86,10 @@ async def process_updates(data: Dict, bot):
 
 @ThreadSwitcherWithDB.optimized
 async def send_updates(updates, bot):
+    logger.info(f'New updates: {" ".join(updates)}')
     async with db_in_thread():
         updates = db.query(WallPost).filter(WallPost.wall_post_id.in_(sorted(updates)))
     for item in updates:
-        print(item)
         text = item.text or '>'
         text = f'{text}\n{item.source}'
         try:
