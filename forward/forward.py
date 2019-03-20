@@ -86,7 +86,10 @@ async def process_updates(data: Dict, bot):
 
 @ThreadSwitcherWithDB.optimized
 async def send_updates(updates, bot):
-    logger.info(f'New updates: {" ".join(updates)}')
+    logger.info(f'New updates: {" ".join(str(u) for u in updates)}')
+    to_sleep = False
+    if len(updates) > 1:
+        to_sleep = True
     async with db_in_thread():
         updates = db.query(WallPost).filter(WallPost.wall_post_id.in_(sorted(updates)))
     for item in updates:
@@ -96,6 +99,10 @@ async def send_updates(updates, bot):
             await bot._bot.send_message(conf.channel_id, text)
         except Exception:
             logger.exception('Error during sending new post!')
+            continue
+        if to_sleep:
+            logger.info('Sleeping since there are multiple messages..')
+            await asyncio.sleep(1)
 
 
 async def main():
