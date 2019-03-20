@@ -1,7 +1,8 @@
 from loguru import logger
 from sqla_wrapper import SQLAlchemy
-from sqlalchemy import BigInteger, Column, Integer, JSON, String
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, JSON, String
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import relationship
 
 from forward import conf
 from .utils import db_session_scope
@@ -26,10 +27,33 @@ class Admin(BaseModel):
     chat_id = Column(BigInteger, unique=True)
 
 
+class Profile(BaseModel):
+    profile_id = Column(Integer, primary_key=True)
+    first_name = Column(String)
+    last_name = Column(String)
+    data = Column(JSON)
+
+    def __str__(self):
+        return f'{self.profile_id} - {self.first_name} {self.last_name}'
+
+    @classmethod
+    def create(cls, profile_id, first_name, last_name, data):
+        profile = db.query(cls).filter(cls.profile_id == profile_id).one_or_none()
+        if profile:
+            return profile
+        return cls(profile_id=profile_id, first_name=first_name, last_name=last_name, data=data)
+
+    @property
+    def profile_link(self):
+        return f'https://vk.com/id{self.profile_id}'
+
+
 class WallPost(BaseModel):
     wall_post_id = Column(Integer, primary_key=True)
     text = Column(String)
     data = Column(JSON)
+    profile_id = Column(Integer, ForeignKey(Profile.profile_id), nullable=True)
+    profile = relationship('Profile')
 
     @property
     def source(self):

@@ -12,7 +12,7 @@ from sqlalchemy import func
 
 from forward import conf
 from forward.bot import ForwardBot
-from forward.model import WallPost, db
+from forward.model import Profile, WallPost, db
 from forward.model.helpers import ThreadSwitcherWithDB, db_in_thread
 
 config = {
@@ -64,7 +64,7 @@ async def ask(session: aiohttp.ClientSession, bot):
         return
     data = await response.json()
     logger.debug(f'Total: {data["response"]["count"]}')
-    await process_updates(data['response']['items'], bot)
+    await process_updates(data['response'], bot)
 
 
 @ThreadSwitcherWithDB.optimized
@@ -74,29 +74,53 @@ async def process_updates(data: Dict, bot):
         last_wall_post_id = db.query(func.max(WallPost.wall_post_id)).scalar()
         if not last_wall_post_id:
             last_wall_post_id = 0
-    async with db_in_thread():
-        for item in data:
+        if max(item['id'] for item in data['items']) <= last_wall_post_id:
+            return
+        for item in data['profiles']:
+            profile = Profile(
+                profile_id=item['id'],
+                first_name=item['first_name'],
+                last_name=item['last_name'],
+                data=item
+            )
+            db.add(profile)
+        for item in data['items']:
             if item['id'] > last_wall_post_id:
-                post = WallPost(wall_post_id=item['id'], text=item['text'], data=item)
+                if item['from_id'] == conf.group_id:
+                    continue  # TODO fix repost
+                post = WallPost(
+                    wall_post_id=item['id'],
+                    text=item['text'],
+                    profile_id=item['from_id'],
+                    data=item
+                )
                 db.add(post)
                 to_send.append(item['id'])
         db.commit()
     await send_updates(to_send, bot)
 
 
+def render_message(post: WallPost):
+    user = post.profile
+    message = post.text or '>'
+    text = f'[{user.first_name} {user.last_name}]({user.profile_link}) [@]({post.source}) '
+    text = f'{text}\n{message}'
+    return text
+
+
 @ThreadSwitcherWithDB.optimized
 async def send_updates(updates, bot):
-    logger.info(f'New updates: {" ".join(str(u) for u in updates)}')
     to_sleep = False
     if len(updates) > 1:
         to_sleep = True
     async with db_in_thread():
-        updates = db.query(WallPost).filter(WallPost.wall_post_id.in_(sorted(updates)))
+        updates = db.query(WallPost).filter(WallPost.wall_post_id.in_(updates))
+    updates = sorted(updates, key=lambda u: u.wall_post_id)
+    logger.info(f'New updates: {" ".join(str(u) for u in updates)}')
     for item in updates:
-        text = item.text or '>'
-        text = f'{text}\n{item.source}'
+        text = render_message(item)
         try:
-            await bot._bot.send_message(conf.channel_id, text)
+            await bot._bot.send_message(conf.channel_id, text, disable_web_page_preview=True, parse_mode='Markdown')
         except Exception:
             logger.exception('Error during sending new post!')
             continue
