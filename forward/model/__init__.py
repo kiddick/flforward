@@ -48,6 +48,11 @@ class Profile(BaseModel):
         return f'https://vk.com/id{self.profile_id}'
 
 
+def max_size(sizes):
+    sizes.sort(key=lambda k: k['height'])
+    return sizes[-1]['url']
+
+
 class WallPost(BaseModel):
     wall_post_id = Column(Integer, primary_key=True)
     text = Column(String)
@@ -58,6 +63,16 @@ class WallPost(BaseModel):
     @property
     def source(self):
         return f'https://vk.com/wall{conf.group_id}_{self.wall_post_id}'
+
+    @property
+    def photo_attachments(self):
+        attachments = self.data.get('attachments')
+        if not attachments:
+            return
+        attachments = [a for a in attachments if a['type'] == 'photo']
+        if not attachments:
+            return
+        return [{'type': 'photo', 'media': max_size(attach['photo']['sizes'])} for attach in attachments]
 
     def __str__(self):
         return f'{self.wall_post_id} - {self.text}'

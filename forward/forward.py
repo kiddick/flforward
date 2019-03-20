@@ -1,11 +1,13 @@
 import asyncio
 import datetime
+import json
 import logging
 import sys
 from pathlib import Path
 from typing import Dict
 
 import aiohttp
+from aiotg import Chat
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
 from sqlalchemy import func
@@ -103,7 +105,7 @@ async def process_updates(data: Dict, bot):
 def render_message(post: WallPost):
     user = post.profile
     message = post.text or '>'
-    text = f'[{user.first_name} {user.last_name}]({user.profile_link}) [@]({post.source}) '
+    text = f'[{user.first_name} {user.last_name}]({user.profile_link}) [@original]({post.source}) '
     text = f'{text}\n{message}'
     return text
 
@@ -119,11 +121,21 @@ async def send_updates(updates, bot):
     logger.info(f'New updates: {" ".join(str(u) for u in updates)}')
     for item in updates:
         text = render_message(item)
-        try:
-            await bot._bot.send_message(conf.channel_id, text, disable_web_page_preview=True, parse_mode='Markdown')
-        except Exception:
-            logger.exception('Error during sending new post!')
-            continue
+        photos = item.photo_attachments
+        if not photos:
+            try:
+                await bot._bot.send_message(conf.channel_id, text, disable_web_page_preview=True, parse_mode='Markdown')
+            except Exception:
+                logger.exception('Error during sending new post!')
+                continue
+        else:
+            photos[0]['caption'] = text
+            photos[0]['parse_mode'] = 'Markdown'
+            try:
+                await Chat(bot._bot, conf.channel_id).send_media_group(media=json.dumps(photos), disable_web_page_preview=True)
+            except Exception:
+                logger.exception('Error during sending new post!')
+                continue
         if to_sleep:
             logger.info('Sleeping since there are multiple messages..')
             await asyncio.sleep(1)
