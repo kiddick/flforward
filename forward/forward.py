@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import html
 import json
 import logging
 import sys
@@ -105,7 +106,10 @@ async def process_updates(data: Dict, bot):
 def render_message(post: WallPost):
     user = post.profile
     message = post.text or '>'
-    text = f'[{user.first_name} {user.last_name}]({user.profile_link}) [@original]({post.source}) '
+    message = html.escape(message)
+    who = f'<a href="{user.profile_link}">{user.first_name} {user.last_name}</a>'
+    original = f'<a href="{post.source}">@original</a>'
+    text = f'{who} {original}'
     text = f'{text}\n{message}'
     return text
 
@@ -124,15 +128,16 @@ async def send_updates(updates, bot):
         photos = item.photo_attachments
         if not photos:
             try:
-                await bot._bot.send_message(conf.channel_id, text, disable_web_page_preview=True, parse_mode='Markdown')
+                await bot._bot.send_message(conf.channel_id, text, disable_web_page_preview=True, parse_mode='HTML')
             except Exception:
                 logger.exception('Error during sending new post!')
                 continue
         else:
             photos[0]['caption'] = text
-            photos[0]['parse_mode'] = 'Markdown'
+            photos[0]['parse_mode'] = 'HTML'
             try:
-                await Chat(bot._bot, conf.channel_id).send_media_group(media=json.dumps(photos), disable_web_page_preview=True)
+                await Chat(
+                    bot._bot, conf.channel_id).send_media_group(media=json.dumps(photos), disable_web_page_preview=True)
             except Exception:
                 logger.exception('Error during sending new post!')
                 continue
