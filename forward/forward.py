@@ -77,7 +77,7 @@ async def process_updates(data: Dict, bot):
         if max(item['id'] for item in data['items']) <= last_wall_post_id:
             return
         for item in data['profiles']:
-            profile = Profile(
+            profile = Profile.create(
                 profile_id=item['id'],
                 first_name=item['first_name'],
                 last_name=item['last_name'],
