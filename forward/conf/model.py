@@ -17,5 +17,7 @@ class Conf:
     group_id: int
     interval: int
     channel_id: int
+    stdout_log: Optional[bool] = False
+    sql_log: Optional[bool] = False
     tele_proxy: Optional[str] = None
     root_dir: Optional[str] = None

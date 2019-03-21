@@ -18,30 +18,30 @@ from forward.bot import ForwardBot
 from forward.model import Profile, WallPost, db
 from forward.model.helpers import ThreadSwitcherWithDB, db_in_thread
 
-config = {
-    'handlers': [
-        {
-            'sink': Path(conf.root_dir) / conf.log_file,
-            'level': 'DEBUG'
-        },
-        {
-            'sink': sys.stdout,
-            'level': 'DEBUG'
-        },
-    ],
-}
-logger.configure(**config)
 
+def init_logging():
+    config = {
+        'handlers': [
+            {
+                'sink': Path(conf.root_dir) / conf.log_file,
+                'level': 'DEBUG'
+            },
+        ],
+    }
+    if conf.stdout_log:
+        config['handlers'].append({'sink': sys.stdout, 'level': 'DEBUG'})
+    logger.configure(**config)
 
-class InterceptHandler(logging.Handler):
-    def emit(self, record):
-        logger_opt = logger.opt(exception=record.exc_info)
-        logger_opt.log(record.levelname, record.getMessage())
+    class InterceptHandler(logging.Handler):
+        def emit(self, record):
+            logger_opt = logger.opt(depth=6, exception=record.exc_info)
+            logger_opt.log(record.levelname, record.getMessage())
 
+    logging.getLogger(None).setLevel(logging.DEBUG)
+    if conf.sql_log:
+        logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
+    logging.getLogger(None).addHandler(InterceptHandler())
 
-logging.getLogger(None).setLevel(logging.DEBUG)
-logging.getLogger('sqlalchemy').setLevel(logging.DEBUG)
-logging.getLogger(None).addHandler(InterceptHandler())
 
 API = 'https://api.vk.com/method/'
 
@@ -159,6 +159,7 @@ async def main():
 
 
 def run():
+    init_logging()
     logger.info('Running flforward service')
     asyncio.run(main())
 
