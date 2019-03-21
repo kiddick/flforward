@@ -11,7 +11,6 @@ import aiohttp
 from aiotg import Chat
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
-from sqlalchemy import func
 
 from forward import conf
 from forward.bot import ForwardBot
@@ -74,7 +73,7 @@ async def ask(session: aiohttp.ClientSession, bot):
 async def process_updates(data: Dict, bot):
     to_send = []
     async with db_in_thread():
-        last_wall_post_id = db.query(func.max(WallPost.wall_post_id)).scalar()
+        last_wall_post_id = WallPost.get_last_wall_post_id()
         if not last_wall_post_id:
             last_wall_post_id = 0
         if max(item['id'] for item in data['items']) <= last_wall_post_id:
@@ -104,6 +103,7 @@ async def process_updates(data: Dict, bot):
 
 
 def render_message(post: WallPost):
+    logger.info('Render message')
     user = post.profile
     message = post.text or '>'
     message = html.escape(message)
@@ -120,8 +120,7 @@ async def send_updates(updates, bot):
     if len(updates) > 1:
         to_sleep = True
     async with db_in_thread():
-        updates = db.query(WallPost).filter(WallPost.wall_post_id.in_(updates))
-    updates = sorted(updates, key=lambda u: u.wall_post_id)
+        updates = WallPost.get_updates(updates)
     logger.info(f'New updates: {" ".join(str(u) for u in updates)}')
     for item in updates:
         text = render_message(item)

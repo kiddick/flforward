@@ -1,8 +1,8 @@
 from loguru import logger
 from sqla_wrapper import SQLAlchemy
-from sqlalchemy import BigInteger, Column, ForeignKey, Integer, JSON, String
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, JSON, String, func
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import joinedload, relationship
 
 from forward import conf
 from .utils import db_session_scope
@@ -73,6 +73,16 @@ class WallPost(BaseModel):
         if not attachments:
             return
         return [{'type': 'photo', 'media': max_size(attach['photo']['sizes'])} for attach in attachments]
+
+    @classmethod
+    def get_updates(cls, updates):
+        updates = db.query(cls).filter(cls.wall_post_id.in_(updates)).options(joinedload(cls.profile))
+        updates = sorted(updates, key=lambda u: u.wall_post_id)
+        return updates
+
+    @classmethod
+    def get_last_wall_post_id(cls):
+        return db.query(func.max(cls.wall_post_id)).scalar()
 
     def __str__(self):
         return f'{self.wall_post_id} - {self.text}'
