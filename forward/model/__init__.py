@@ -43,6 +43,10 @@ class Profile(BaseModel):
             return profile
         return cls(profile_id=profile_id, first_name=first_name, last_name=last_name, data=data)
 
+    @classmethod
+    def create_from_item(cls, item):
+        return cls.create(profile_id=item['id'], first_name=item['first_name'], last_name=item['last_name'], data=item)
+
     @property
     def profile_link(self):
         return f'https://vk.com/id{self.profile_id}'
@@ -59,6 +63,10 @@ class WallPost(BaseModel):
     data = Column(JSON)
     profile_id = Column(Integer, ForeignKey(Profile.profile_id), nullable=True)
     profile = relationship('Profile')
+
+    @classmethod
+    def create_from_item(cls, item):
+        return cls(wall_post_id=item['id'], text=item['text'], profile_id=item['from_id'], data=item)
 
     @property
     def source(self):

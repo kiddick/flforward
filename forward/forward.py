@@ -77,25 +77,16 @@ async def process_updates(data: Dict, bot):
         if not last_wall_post_id:
             last_wall_post_id = 0
         if max(item['id'] for item in data['items']) <= last_wall_post_id:
+            logger.info('No updates')
             return
         for item in data['profiles']:
-            profile = Profile.create(
-                profile_id=item['id'],
-                first_name=item['first_name'],
-                last_name=item['last_name'],
-                data=item
-            )
+            profile = Profile.create_from_item(item)
             db.add(profile)
         for item in data['items']:
             if item['id'] > last_wall_post_id:
                 if item['from_id'] == conf.group_id:
                     continue  # TODO fix repost
-                post = WallPost(
-                    wall_post_id=item['id'],
-                    text=item['text'],
-                    profile_id=item['from_id'],
-                    data=item
-                )
+                post = WallPost.create_from_item(item)
                 db.add(post)
                 to_send.append(item['id'])
         db.commit()
@@ -160,7 +151,10 @@ async def main():
 def run():
     init_logging()
     logger.info('Running flforward service')
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info('Shutting down..')
 
 
 if __name__ == '__main__':
