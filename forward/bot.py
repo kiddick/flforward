@@ -23,6 +23,36 @@ async def get_chat_id(chat, match):
     await chat.send_text(f'Chat id: {chat.id}')
 
 
+class ChatEditMedia(Chat):
+
+    def edit_message_media(self, message_id, media, **options):
+        return self.bot.api_call(
+            "editMessageMedia",
+            chat_id=str(self.id),
+            message_id=message_id,
+            media=media,
+            **options
+        )
+
+    def edit_text(self, message_id, text, **options):
+        """
+        Edit the message in this chat.
+
+        :param int message_id: ID of the message to edit
+        :param str text: Text to edit the message to
+        :param dict markup: Markup options
+        :param str parse_mode: Text parsing mode (``"Markdown"``, ``"HTML"`` or
+            ``None``)
+        """
+
+        return self.bot.edit_message_text(
+            self.id,
+            message_id,
+            text,
+            **options
+        )
+
+
 class ForwardBot:
     def __init__(self):
         self._bot = Bot(conf.bot_token, proxy=conf.tele_proxy)
