@@ -29,7 +29,7 @@ def init_logging():
         ],
     }
     if conf.stdout_log:
-        config['handlers'].append({'sink': sys.stdout, 'level': 'DEBUG'})
+        config['handlers'].append({'sink': sys.stdout, 'level': 'DEBUG', 'rotation': '1 week'})
     logger.configure(**config)
 
     class InterceptHandler(logging.Handler):
