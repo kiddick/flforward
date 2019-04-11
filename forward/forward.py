@@ -117,7 +117,7 @@ def render_message(post: WallPost):
 async def update_existing(to_update: List[Dict], bot):
     to_update = {item['id']: item for item in to_update}
     to_update_str = ' '.join(str(i) for i in to_update)
-    logger.critical(f'Updating existing: {to_update_str}')
+    logger.info(f'Updating existing: {to_update_str}')
     to_update_send = []
     async with db_in_thread():
         posts_to_update = WallPost.get_existing_to_update(list(to_update.keys()))
@@ -126,7 +126,7 @@ async def update_existing(to_update: List[Dict], bot):
                 to_update_send.append(post.wall_post_id)
         db.commit()
     to_update_send_str = ' '.join(str(i) for i in to_update_send)
-    logger.critical(f'Modified entities: {to_update_send_str}')
+    logger.info(f'Modified entities: {to_update_send_str}')
     if to_update_send:
         async with db_in_thread():
             posts_to_update_send = WallPost.get_existing_to_update(to_update_send, load_profiles=True)
@@ -179,7 +179,11 @@ class UpdatesSender:
         self.chat = Chat(bot._bot, conf.channel_id)
 
     def send_photos(self):
-        self.photos[0]['caption'] = self.text
+        if len(self.text) > 1024:
+            text = 'TOO LONG DESCRIPTION'
+        else:
+            text = self.text
+        self.photos[0]['caption'] = text
         self.photos[0]['parse_mode'] = 'HTML'
         try:
             result = call_async(
